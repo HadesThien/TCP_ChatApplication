@@ -20,5 +20,11 @@
 	<classpathentry kind="lib" path="C:/Users/THINKPAD/.p2/pool/plugins/org.eclipse.text_3.14.200.v20240915-0736.jar" sourcepath="C:/Users/THINKPAD/.p2/pool/plugins/org.eclipse.text_3.14.200.v20240915-0736.jar"/>
 	<classpathentry kind="lib" path="C:/Users/THINKPAD/.p2/pool/plugins/org.eclipse.ui.forms_3.13.400.v20240905-1138.jar" sourcepath="C:/Users/THINKPAD/.p2/pool/plugins/org.eclipse.ui.forms_3.13.400.v20240905-1138.jar"/>
 	<classpathentry kind="lib" path="C:/Users/THINKPAD/.p2/pool/plugins/org.eclipse.ui.workbench_3.134.0.v20241107-2150.jar" sourcepath="C:/Users/THINKPAD/.p2/pool/plugins/org.eclipse.ui.workbench_3.134.0.v20241107-2150.jar"/>
+	<classpathentry kind="lib" path="D:/Downloaded/IDE/Eclipse/ChatClient/mssql-jdbc-12.10.0.jre11.jar">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="D:/Downloaded/IDE/Eclipse/ChatClient/mysql-connector-j-9.2.0/mysql-connector-j-9.2.0/mysql-connector-j-9.2.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

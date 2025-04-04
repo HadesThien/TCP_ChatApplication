@@ -1,44 +1,51 @@
 package ChatClient;
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
-
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.*;
-import java.util.Random;
 
 public class ChatClient {
-    private static final String SERVER_ADDRESS = "localhost";
-    private static final int SERVER_PORT = 12345;
-
     private JFrame frame;
-//    private JTextField textField;
-	private JPanel contentPane;
-	private JTextArea chatTextArea;
-	private JPanel controlPanel;
-	private JTextArea typingTextArea;
-	private JButton fileButton;
-	private JPanel avatar;
-	private Container titlePanel;
-	private JLabel clientJLabel;
-	private JButton sendButton;
-
+    private JPanel contentPane;
+    private JTextArea chatTextArea;
+    private JPanel controlPanel;
+    private JTextArea typingTextArea;
+    private JButton fileButton;
+    private JPanel avatar;
+    private Container titlePanel;
+    private JLabel clientJLabel;
+    private JButton sendButton;
 
     private PrintWriter out;
     private Socket socket;
     private String username;
 
     public ChatClient() {
-        // Nhập username
-        username = JOptionPane.showInputDialog(null, "Nhập username của bạn:", "Đặt tên", JOptionPane.PLAIN_MESSAGE);
-        if (username == null || username.trim().isEmpty()) {
-            username = "Anonymous_" + new Random().nextInt(1000);
-        }
+        // Hiển thị trang đăng nhập
+        LoginDialog loginDialog = new LoginDialog(null);
+        loginDialog.setVisible(true);
 
+        // Nếu đăng nhập thành công, lấy thông tin từ LoginDialog
+        if (loginDialog.getUsername() != null) {
+            username = loginDialog.getUsername();
+            socket = loginDialog.getSocket();
+            out = loginDialog.getPrintWriter();
+
+            // Khởi tạo giao diện chat
+            initializeUI(loginDialog);
+            startMessageListener();
+        } else {
+            System.exit(0); // Thoát nếu không đăng nhập thành công
+        }
+    }
+
+    private void initializeUI(LoginDialog loginDialog) {
         // Tạo giao diện Swing
         frame = new JFrame("Chat Client - " + username);
         chatTextArea = new JTextArea(20, 50);
@@ -62,7 +69,7 @@ public class ChatClient {
 		chatTextArea.setBackground(Color.WHITE);
 		chatTextArea.setEditable(false);
 		chatTextArea.setFont(new Font("JetBrains Mono SemiBold", Font.PLAIN, 15));
-		chatTextArea.setText("Server: Welcome Client! You would give me a message and I'm going to \r\nsend you a crypted message\r\nServer: Let's talk!\r\n");
+		chatTextArea.setText("Server: Welcome "+ loginDialog.getUsername()+"! You would give me a message and I'm going to \r\nsend you a crypted message\r\nServer: Let's talk!\r\n");
 		chatTextArea.setForeground(SystemColor.desktop);
 		
 		controlPanel = new JPanel();
@@ -200,49 +207,26 @@ public class ChatClient {
         });
     }
 
-    public void connectToServer() {
-        try {
-            socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
-            out = new PrintWriter(socket.getOutputStream(), true);
-            InputStream is = socket.getInputStream();
-            DataInputStream dataInputStream = new DataInputStream(is);
-            BufferedReader in = new BufferedReader(new InputStreamReader(is));
-
-            // Gửi username đến server
-            String serverRequest = in.readLine();
-            if (serverRequest.startsWith("Nhập username")) {
-                out.println(username);
-            }
-
-            // Xử lý thông báo từ server về username trùng
-            String response;
-            while ((response = in.readLine()) != null && response.contains("Username đã tồn tại")) {
-                username = JOptionPane.showInputDialog(null, response, "Đặt tên lại", JOptionPane.WARNING_MESSAGE);
-                out.println(username);
-            }
-            chatTextArea.append("Đã kết nối đến server với tên: " + username + "\n");
-
-            // Luồng nhận tin nhắn từ server
-            new Thread(() -> {
-                try {
-                    String message;
-                    while ((message = in.readLine()) != null) {
-						System.out.println(dataInputStream.available());
-                        final String msg = message;
-                        if(msg.startsWith("#FILE#")) {
-                        	receiveFile(dataInputStream,msg);
-                        }else {
-							SwingUtilities.invokeLater(() -> chatTextArea.append(msg + "\n"));
-                        }
+    private void startMessageListener() {
+        new Thread(() -> {
+            try {
+                InputStream is = socket.getInputStream();
+                DataInputStream dataInputStream = new DataInputStream(is);
+                BufferedReader in = new BufferedReader(new InputStreamReader(is));
+                String message;
+                while ((message = in.readLine()) != null) {
+                    final String msg = message;
+                    if (msg.startsWith("#FILE#")) {
+                        receiveFile(dataInputStream, msg);
+                    } else {
+                        SwingUtilities.invokeLater(() -> chatTextArea.append(msg + "\n"));
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
                 }
-            }).start();
-        } catch (IOException e) {
-            chatTextArea.append("Không thể kết nối đến server!\n");
-            e.printStackTrace();
-        }
+            } catch (IOException e) {
+                SwingUtilities.invokeLater(() -> chatTextArea.append("Mất kết nối đến server!\n"));
+                e.printStackTrace();
+            }
+        }).start();
     }
 
     private void sendMessage() {
@@ -252,6 +236,7 @@ public class ChatClient {
             typingTextArea.setText("");
         }
     }
+
     private void sendFile() {
         JFileChooser fileChooser = new JFileChooser();
         if (fileChooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
@@ -282,12 +267,10 @@ public class ChatClient {
             }
         }
     }
+
     private void receiveFile(DataInputStream dataIn, String fileHeader) throws IOException {
         String sender = fileHeader.split("#")[2];
-        System.out.println(sender);
-        System.out.println(dataIn.available());
         String fileName = dataIn.readUTF();
-        System.out.println(fileName==null);
         long fileSize = dataIn.readLong();
         byte[] fileData = new byte[(int) fileSize];
         dataIn.readFully(fileData);
@@ -301,8 +284,8 @@ public class ChatClient {
             SwingUtilities.invokeLater(() -> chatTextArea.append("Đã nhận file " + fileName + " từ " + sender + "\n"));
         }
     }
+
     public static void main(String[] args) {
-        ChatClient client = new ChatClient();
-        client.connectToServer();
+        new ChatClient();
     }
 }
